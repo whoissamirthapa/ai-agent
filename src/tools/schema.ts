@@ -3,28 +3,39 @@ const tools = [
   {
     type: "function",
     function: {
-      name: "getWeather",
-      description: "Get the current weather for a city",
+      name: "getTodos",
+      description:
+        "Get todos for a user. Requires either a userId. or completed flag",
       parameters: {
         type: "object",
         properties: {
-          city: { type: "string", description: "The city name" },
+          userId: {
+            type: "number",
+            description:
+              "id of a user and should be fetched from the user detail",
+          },
+          completed: {
+            type: "boolean",
+            description:
+              "Filter todos by completion status: true returns completed todos, false returns incomplete todos. If omitted, returns all todos regardless of status.",
+          },
         },
-        required: ["city"],
+        anyOf: [{ required: ["completed"] }, { required: ["userId"] }],
       },
     },
   },
   {
     type: "function",
     function: {
-      name: "getTime",
-      description: "Get the current time for a timezone",
+      name: "getUser",
+      description: "Retrieve user details.",
       parameters: {
         type: "object",
         properties: {
-          timezone: { type: "string", description: "The timezone" },
+          name: { type: "string", description: "Name of a user" },
+          userId: { type: "number", description: "id of a user" },
         },
-        required: ["timezone"],
+        anyOf: [{ required: ["name"] }, { required: ["userId"] }],
       },
     },
   },
