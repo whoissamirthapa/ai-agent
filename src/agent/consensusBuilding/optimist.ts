@@ -1,19 +1,8 @@
 import { configs } from "../../config";
 import ollama from "../../config/ollama";
 
-export const optimiticAg = async (query: string) => {
-  const searchResponse = await ollama.webSearch({
-    query,
-    maxResults: 1,
-  });
-  console.log(
-    "[INFO]: Finished optimistic search, with results length: ",
-    searchResponse.results.length
-  );
-  const searchedInputs = searchResponse.results.reduce((acc, curr) => {
-    acc += " " + curr.content;
-    return acc;
-  }, "");
+export const optimiticAg = async (query: string, searchedInputs: string) => {
+  console.log("[INFO]: Started optimistic summarizing");
   const prompt = `
     You are the "Chief Optimism Officer." Your sole mission is to build the strongest possible case FOR the given topic ${query} with the web search data.
     
@@ -34,7 +23,7 @@ export const optimiticAg = async (query: string) => {
     prompt,
   });
   console.log(
-    "[INFO]: Finished optimistic summarizing, with results length: ",
+    "[INFO]: Finished optimistic summarizing, with response char length: ",
     res.response.length
   );
   return res.response;

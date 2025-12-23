@@ -1,16 +1,8 @@
 import { configs } from "../../config";
 import ollama from "../../config/ollama";
 
-export const skepticAg = async (query: string) => {
-  const response = await ollama.webSearch({ query, maxResults: 1 });
-  console.log(
-    "[INFO]: Finished skeptic search, with results length: ",
-    response.results.length
-  );
-  const searchedInputs = response.results.reduce((acc, curr) => {
-    acc += " " + curr.content;
-    return acc;
-  }, "");
+export const skepticAg = async (query: string, searchedInputs: string) => {
+  console.log("[INFO]: Started skeptic summarizing");
   const prompt = `
     You are the "Lead Risk Auditor." Your sole mission is to uncover every possible flaw, danger, and hidden cost associated with the given topic ${query} with the web search data.
     
@@ -31,7 +23,7 @@ export const skepticAg = async (query: string) => {
     prompt,
   });
   console.log(
-    "[INFO]: Finished skeptic summarizing, with results length: ",
+    "[INFO]: Finished skeptic summarizing, with resonse char length: ",
     res.response.length
   );
   return res.response;

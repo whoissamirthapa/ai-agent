@@ -4,11 +4,37 @@ import { optimiticAg } from "./optimist";
 import { skepticAg } from "./skeptic";
 
 class Orchestrator {
-  async judge(query: string) {
+  async webSearch(query: string) {
     try {
+      console.log("[INFO]: Started web search");
+      const searchResponse = await ollama.webSearch({
+        query,
+        maxResults: 1,
+      });
+      const searchedInput = searchResponse.results.reduce((acc, curr) => {
+        acc += " " + curr.content;
+        return acc;
+      }, "");
+      console.log(
+        "[INFO]: Finished web search, with results length: ",
+        searchResponse.results.length,
+        "and character length: ",
+        searchedInput.length
+      );
+      return searchedInput;
+    } catch (error) {
+      console.error(error);
+      return null;
+    }
+  }
+  async judge(query: string) {
+    let start = new Date().getTime();
+    try {
+      const searchedInput = await this.webSearch(query);
+      if (!searchedInput) return "Something went wrong, please try again!";
       const [optimitic, skeptic] = await Promise.all([
-        optimiticAg(query),
-        skepticAg(query),
+        optimiticAg(query, searchedInput),
+        skepticAg(query, searchedInput),
       ]);
       if (!optimitic || !skeptic) throw new Error("One of response not found");
       const prompt = this.getPrompt({
@@ -16,16 +42,73 @@ class Orchestrator {
         pros: skeptic,
         topic: query,
       });
+      console.log("[INFO]: Started final generation");
       const response = await ollama.generate({
         model: configs.MODEL_NAME!,
         prompt: prompt.input,
         system: prompt.prompt,
+        format: {
+          $schema: "https://json-schema.org/draft/2020-12/schema",
+          type: "object",
+          required: [
+            "Executive Summary",
+            "Direct Trade-offs & Clashes",
+            "Decision Framework",
+          ],
+          properties: {
+            "Executive Summary": {
+              type: "string",
+              description: "High-level summary text",
+            },
+            "Direct Trade-offs & Clashes": {
+              type: "array",
+              description: "List of conflicts and their explanations",
+              items: {
+                type: "object",
+                minProperties: 1,
+                additionalProperties: {
+                  type: "string",
+                  description: "Explanation of both sides of the conflict",
+                },
+              },
+            },
+            "Decision Framework": {
+              type: "object",
+              required: ["Proceed if", "Wait/Avoid if"],
+              properties: {
+                "Proceed if": {
+                  type: "array",
+                  items: {
+                    type: "string",
+                  },
+                  description: "Conditions under which to proceed",
+                },
+                "Wait/Avoid if": {
+                  type: "array",
+                  items: {
+                    type: "string",
+                  },
+                  description: "Conditions under which to wait or avoid",
+                },
+              },
+              additionalProperties: false,
+            },
+          },
+          additionalProperties: false,
+        },
       });
       console.log("[INFO]: Response generated");
-      return response.response;
+      return JSON.parse(response.response);
     } catch (error) {
       console.error(error);
       return "Something went wrong, please try again!";
+    } finally {
+      const timeInMs = new Date().getTime() - start;
+      console.log(
+        "[INFO]: Total time taken to respond ",
+        timeInMs / 60000,
+        "minutes"
+      );
     }
   }
   private getPrompt(props: { topic: string; cons: string; pros: string }) {
