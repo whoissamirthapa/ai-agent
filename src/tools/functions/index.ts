@@ -15,10 +15,10 @@ export async function getTodos(args: {
   if (userId) {
     url += "userId=" + userId;
   }
-  if (!userId && (completed === true || completed === false)) {
+  if (!userId && isValidCompletionProp(completed)) {
     url += "completed=" + completed;
   }
-  if (userId && (completed === true || completed === false)) {
+  if (userId && isValidCompletionProp(completed)) {
     url += "&completed=" + completed;
   }
   console.log("[API]:", url);
@@ -45,6 +45,10 @@ export const getUser = async (args: {
   console.log("[API]:", url);
   const userResponse = await axios.get(url.toString());
   return userResponse.data;
+};
+
+const isValidCompletionProp = (completed?: boolean) => {
+  return completed === true || completed === false;
 };
 
 export const availableFunctions: Record<string, Function> = {
