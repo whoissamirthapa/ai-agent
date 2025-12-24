@@ -29,6 +29,11 @@ app.post("/collective-decision", async (req, res) => {
   res.status(200).json({ reply: answer });
 });
 
+app.get("/search", async (req, res) => {
+  const abc = await orchestrator.metaSearch(req.query.q as string);
+  res.status(200).json({ data: abc });
+});
+
 app.listen(port, () => {
   console.log("App running at", port);
 });

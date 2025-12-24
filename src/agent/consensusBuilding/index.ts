@@ -1,12 +1,46 @@
-import { configs } from "../../config";
 import ollama from "ollama";
+import { SearxngService } from "searxng";
+import { configs } from "../../config";
 import { optimiticAg } from "./optimist";
 import { skepticAg } from "./skeptic";
 
 class Orchestrator {
+  searchService: SearxngService[];
+  constructor() {
+    const instances = [
+      "https://searx.be",
+      "https://searx.tiekoetter.com",
+      "https://searxng.site",
+      "https://search.atlas.engineer",
+      "https://opnxng.com",
+      "http://localhost:8082/",
+    ];
+    this.searchService = instances.map(
+      (baseURL) =>
+        new SearxngService({
+          baseURL,
+
+          defaultRequestHeaders: {
+            "User-Agent": "Mozilla/5.0 (compatible; MyApp/1.0)",
+          },
+        })
+    );
+  }
+  async metaSearch(input: string) {
+    for (const svc of this.searchService) {
+      try {
+        return await svc.search(input, { format: "json" });
+      } catch (e) {
+        // try next instance on failure
+        console.warn(`Instance failed: `, e);
+      }
+    }
+    throw new Error("All instances failed");
+  }
   async webSearch(query: string) {
     try {
       console.log("[INFO]: Started web search");
+      this.metaSearch(query);
       const searchResponse = await ollama.webSearch({
         query,
         maxResults: 1,
