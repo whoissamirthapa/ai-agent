@@ -189,10 +189,96 @@ function renderConsensus(data) {
     `
     )
     .join("");
+  // Supporting Evidence Table
+  const evidenceHTML = (data["Supporting Evidence"] || [])
+    .map(
+      (item) => `
+    <tr class="border-b border-slate-100 last:border-0 hover:bg-slate-50 transition-colors">
+        <td class="py-4 px-4 text-sm text-emerald-700 font-medium">${
+          item.Pro ?? "—"
+        }</td>
+        <td class="py-4 px-4 text-sm text-rose-700 font-medium">${
+          item.Con ?? "—"
+        }</td>
+        <td class="py-4 px-4 text-sm text-slate-600 italic border-l border-slate-100">${
+          item.Evidence
+        }</td>
+    </tr>
+  `
+    )
+    .join("");
+  // Risk Analysis
+  const riskHTML = (data["Risk & Uncertainty Analysis"] || [])
+    .map((risk) => {
+      const badgeColor = (val) =>
+        val === "High"
+          ? "bg-rose-100 text-rose-700"
+          : val === "Medium"
+          ? "bg-amber-100 text-amber-700"
+          : "bg-emerald-100 text-emerald-700";
+      return `
+      <div class="bg-white border border-slate-200 p-4 rounded-lg shadow-sm">
+          <div class="flex justify-between items-start mb-2">
+            <span class="font-bold text-slate-800 text-sm">${risk.Risk}</span>
+          </div>
+          <div class="flex gap-2">
+            <span class="text-[10px] uppercase tracking-wider font-bold px-2 py-0.5 rounded ${badgeColor(
+              risk.Likelihood
+            )}">Likelihood: ${risk.Likelihood}</span>
+            <span class="text-[10px] uppercase tracking-wider font-bold px-2 py-0.5 rounded ${badgeColor(
+              risk.Impact
+            )}">Impact: ${risk.Impact}</span>
+          </div>
+      </div>
+    `;
+    })
+    .join("");
+  // Alternative Options
+  const alternativesHTML = (data["Alternative Options"] || [])
+    .map(
+      (alt) => `
+    <div class="border-l-4 border-blue-500 bg-blue-50 p-4 rounded-r-xl">
+        <h5 class="font-bold text-blue-900">${alt.Option}</h5>
+        <p class="text-sm text-blue-800/80 mt-1">${alt.Explanation}</p>
+    </div>
+  `
+    )
+    .join("");
+  // Scenario Analysis
+  const scenariosHTML = (data["Scenario Analysis"] || [])
+    .map(
+      (s) => `
+    <div class="bg-slate-800 text-slate-200 p-5 rounded-xl">
+        <div class="text-xs font-bold text-slate-400 uppercase mb-2">Scenario</div>
+        <div class="text-white font-semibold mb-3">${s.Scenario}</div>
+        <div class="text-sm text-slate-400 border-t border-slate-700 pt-3 italic">
+            <span class="text-blue-400 font-bold">Effect:</span> ${s["Effect on Pros/Cons"]}
+        </div>
+    </div>
+  `
+    )
+    .join("");
+  // Next Steps Table
+  const nextStepsHTML = (data["Next Steps"] || [])
+    .map(
+      (step) => `
+    <tr class="border-b border-slate-200 last:border-0">
+        <td class="py-3 px-2 font-semibold text-slate-800 text-sm">${
+          step.Action
+        }</td>
+        <td class="py-3 px-2 text-slate-600 text-sm">${
+          step.Responsible ?? "TBD"
+        }</td>
+        <td class="py-3 px-2 text-slate-500 text-sm font-mono">${
+          step.Timeline ?? "—"
+        }</td>
+    </tr>
+  `
+    )
+    .join("");
   // Construct the full Template
   const consensusTemplate = `
-    <div class="max-w-6xl mx-auto my-8 animate-in fade-in duration-500">
-        <!-- Header & Executive Summary -->
+    <div class="mx-auto my-8 animate-in fade-in duration-500">
         <header class="mb-12 border-b border-slate-200 pb-8">
             <div class="flex items-center gap-4 mb-4">
                 <div class="bg-slate-900 text-white p-3 rounded-lg shadow-lg">
@@ -202,12 +288,11 @@ function renderConsensus(data) {
             </div>
             <div class="bg-white p-6 rounded-xl border border-slate-200 shadow-sm border-l-4 border-l-slate-800">
                 <h2 class="text-xs font-bold uppercase tracking-widest text-slate-500 mb-3">Executive Summary</h2>
-                <p class="text-slate-700 leading-relaxed text-lg italic font-light">
-                    ${data["Executive Summary"] ?? "n/a"}
-                </p>
+                <p class="text-slate-700 leading-relaxed text-lg italic font-light">${
+                  data["Executive Summary"] ?? "n/a"
+                }</p>
             </div>
         </header>
-        <!-- Direct Trade-offs Section -->
         ${
           data["Direct Trade-offs & Clashes"]?.length
             ? `<section class="mb-16">
@@ -221,34 +306,110 @@ function renderConsensus(data) {
             </section>`
             : ""
         }
-        <!-- Decision Framework Section -->
-        <section>
+        <section class="mb-16">
             <h3 class="text-2xl font-bold text-slate-800 mb-8 flex items-center gap-2">
-                <i class="fas fa-route text-emerald-600"></i>
-                Strategic Decision Framework
+                <i class="fas fa-route text-emerald-600"></i> Strategic Decision Framework
             </h3>
             <div class="grid grid-cols-1 md:grid-cols-2 gap-8">
-                <!-- Proceed If -->
                 <div class="bg-emerald-50 border border-emerald-100 rounded-2xl p-8 transition-transform hover:scale-[1.01]">
-                    <div class="flex items-center gap-3 mb-6 text-emerald-700">
-                        <i class="fas fa-check-circle text-2xl"></i>
-                        <h4 class="text-xl font-bold">Proceed If</h4>
-                    </div>
-                    <ul class="space-y-4">
-                        ${proceedListHTML?.length ? proceedListHTML : "n/a"}
-                    </ul>
+                    <div class="flex items-center gap-3 mb-6 text-emerald-700"><i class="fas fa-check-circle text-2xl"></i><h4 class="text-xl font-bold">Proceed If</h4></div>
+                    <ul class="space-y-4">${proceedListHTML || "n/a"}</ul>
                 </div>
-
-                <!-- Avoid If -->
                 <div class="bg-rose-50 border border-rose-100 rounded-2xl p-8 transition-transform hover:scale-[1.01]">
-                    <div class="flex items-center gap-3 mb-6 text-rose-700">
-                        <i class="fas fa-exclamation-triangle text-2xl"></i>
-                        <h4 class="text-xl font-bold">Wait / Avoid If</h4>
-                    </div>
+                    <div class="flex items-center gap-3 mb-6 text-rose-700"><i class="fas fa-exclamation-triangle text-2xl"></i><h4 class="text-xl font-bold">Wait / Avoid If</h4></div>
+                    <ul class="space-y-4">${avoidListHTML || "n/a"}</ul>
+                </div>
+            </div>
+        </section>
+        <section class="mb-16 overflow-hidden bg-white border border-slate-200 rounded-2xl shadow-sm">
+            <div class="bg-slate-50 px-6 py-4 border-b border-slate-200">
+                <h3 class="font-bold text-slate-800 flex items-center gap-2"><i class="fas fa-microscope text-indigo-500"></i> Supporting Evidence</h3>
+            </div>
+            <table class="w-full text-left border-collapse">
+                <thead>
+                    <tr class="bg-slate-50/50 text-slate-500 text-[10px] uppercase tracking-widest">
+                        <th class="py-3 px-4 font-bold">Pro</th>
+                        <th class="py-3 px-4 font-bold">Con</th>
+                        <th class="py-3 px-4 font-bold">Evidence Reference</th>
+                    </tr>
+                </thead>
+                <tbody>${evidenceHTML}</tbody>
+            </table>
+        </section>
+        <section class="mb-16">
+            <h3 class="text-2xl font-bold text-slate-800 mb-6 flex items-center gap-2">
+                <i class="fas fa-shield-virus text-rose-600"></i> Risk & Uncertainty Analysis
+            </h3>
+            <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">${riskHTML}</div>
+        </section>
+        <div class="flex flex-col lg:flex-row gap-12 mb-16">
+            ${
+              alternativesHTML?.length
+                ? `<section class="w-full">
+                <h3 class="text-2xl font-bold text-slate-800 mb-6">Alternative Options</h3>
+                <div class="space-y-4">${alternativesHTML}</div>
+            </section>`
+                : ""
+            }
+            <section class="w-full">
+                <h3 class="text-2xl font-bold text-slate-800 mb-6 text-emerald-700">Actionable Recommendations</h3>
+                <div class="bg-emerald-900 text-emerald-50 p-6 rounded-2xl shadow-xl">
                     <ul class="space-y-4">
-                        ${avoidListHTML?.length ? avoidListHTML : "n/a"}
+                        ${(data["Actionable Recommendations"] || [])
+                          .map(
+                            (rec) => `
+                            <li class="flex gap-3 items-start border-b border-emerald-800 pb-3 last:border-0">
+                                <i class="fas fa-bolt mt-1 text-emerald-400"></i>
+                                <span class="text-sm leading-relaxed">${rec}</span>
+                            </li>
+                        `
+                          )
+                          .join("")}
                     </ul>
                 </div>
+            </section>
+        </div>
+        <div class="grid grid-cols-1 lg:grid-cols-3 gap-8 mb-16">
+            <div class="lg:col-span-2 space-y-4">
+                <h3 class="text-2xl font-bold text-slate-800 mb-2">Scenario Analysis</h3>
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">${scenariosHTML}</div>
+            </div>
+            <div class="bg-white border-2 border-slate-900 p-6 rounded-2xl flex flex-col justify-center items-center text-center">
+                <div class="text-xs font-bold uppercase tracking-[0.2em] text-slate-500 mb-4">Consensus Score</div>
+                <div class="text-6xl font-black text-slate-900 mb-4">${
+                  data["Consensus Score"]?.Score ?? 0
+                }%</div>
+                <div class="w-full bg-slate-100 h-2 rounded-full mb-6 overflow-hidden">
+                    <div class="bg-slate-900 h-full" style="width: ${
+                      data["Consensus Score"]?.Score ?? 0
+                    }%"></div>
+                </div>
+                <p class="text-sm text-slate-600 italic">${
+                  data["Consensus Score"]?.Explanation ?? ""
+                }</p>
+            </div>
+        </div>
+        <section class="grid grid-cols-1 md:grid-cols-2 gap-8 border-t border-slate-200 pt-12">
+            <div>
+                <h4 class="font-bold text-slate-900 mb-4 flex items-center gap-2">
+                    <i class="fas fa-question-circle text-orange-500"></i> Unresolved Questions
+                </h4>
+                <ul class="space-y-2">
+                    ${(data["Open Questions"] || [])
+                      .map(
+                        (q) =>
+                          `<li class="text-sm text-slate-600 bg-slate-100 p-3 rounded-lg">• ${q}</li>`
+                      )
+                      .join("")}
+                </ul>
+            </div>
+            <div>
+                <h4 class="font-bold text-slate-900 mb-4 flex items-center gap-2">
+                    <i class="fas fa-tasks text-blue-600"></i> Next Steps
+                </h4>
+                <table class="w-full">
+                    <tbody class="divide-y divide-slate-100">${nextStepsHTML}</tbody>
+                </table>
             </div>
         </section>
     </div>
