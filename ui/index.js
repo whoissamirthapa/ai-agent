@@ -1,7 +1,110 @@
+import apis from "./api.js";
+
+const consensusTriggerContainer = document.getElementById(
+  "agent-trigger-container"
+);
+
+const items = ["Consensus"];
+let activeTriggerItem = "";
+let isTriggerPanelOpen = false;
+
 const chatForm = document.getElementById("chat-form");
 const userInput = document.getElementById("user-input");
 const chatWindow = document.getElementById("chat-window");
 const typingIndicator = document.getElementById("typing-indicator");
+const viewTriggerBtns = document.getElementById("view-trigger-btns");
+const agentTriggerItems = document.querySelectorAll(
+  '[data-group="agent-trigger-items"]'
+);
+
+agentTriggerItems.forEach((triggerItem) => {
+  const triggerEl = triggerItem.getAttribute("data-value");
+  const key = triggerEl.toUpperCase();
+  if (!key) {
+    console.error("Data value is required");
+    return;
+  }
+  triggerItem.querySelector("button")?.addEventListener("click", function (e) {
+    e.preventDefault();
+    if (activeTriggerItem) {
+      activeTriggerItem = "";
+    }
+    triggerItem.classList.add("hidden");
+  });
+  triggerItem.addEventListener("click", function (e) {
+    e.preventDefault();
+    activeTriggerItem = key;
+  });
+});
+function generateTriggerItem(
+  name,
+  { selectable = true, closable = false, selected = false }
+) {
+  const div = document.createElement("div");
+  div.className = `
+    w-fit relative py-1 px-3 rounded-xl text-sm cursor-pointer
+    ${
+      selected
+        ? "bg-blue-300/40 border-blue-400"
+        : "bg-blue-100/20 border-blue-100"
+    }
+    border
+  `;
+  div.setAttribute("data-value", name);
+  div.innerHTML = `<div>${name}</div>`;
+  // select item
+  if (selectable) {
+    div.addEventListener("click", () => {
+      activeTriggerItem = name;
+      renderSelectedItems();
+    });
+  }
+  // close button
+  if (closable) {
+    const btn = document.createElement("button");
+    btn.className =
+      "absolute -top-2 right-0 bg-blue-200/40 hover:bg-blue-200/90 rounded-full px-1";
+    btn.innerHTML = `<i class="fa-solid fa-xmark text-red-600 text-sm"></i>`;
+    btn.addEventListener("click", (e) => {
+      e.stopPropagation();
+      activeTriggerItem = "";
+      renderSelectedItems();
+    });
+    div.appendChild(btn);
+  }
+  return div;
+}
+viewTriggerBtns.addEventListener("click", (e) => {
+  e.preventDefault();
+  isTriggerPanelOpen = !isTriggerPanelOpen;
+  consensusTriggerContainer.innerHTML = "";
+  if (isTriggerPanelOpen) {
+    // show all items (unselected)
+    items.forEach((item) => {
+      const isSelected = activeTriggerItem === item;
+      consensusTriggerContainer.appendChild(
+        generateTriggerItem(item, {
+          selectable: true,
+          closable: isSelected,
+          selected: isSelected,
+        })
+      );
+    });
+  }
+});
+function renderSelectedItems() {
+  consensusTriggerContainer.innerHTML = "";
+  isTriggerPanelOpen = false;
+  if (activeTriggerItem) {
+    consensusTriggerContainer.appendChild(
+      generateTriggerItem(activeTriggerItem, {
+        selectable: false,
+        closable: true,
+        selected: true,
+      })
+    );
+  }
+}
 
 // Function to append messages to UI
 function appendMessage(role, text) {
@@ -20,7 +123,6 @@ function appendMessage(role, text) {
   chatWindow.appendChild(msgDiv);
   chatWindow.scrollTop = chatWindow.scrollHeight;
 }
-
 // Handle Form Submission
 chatForm.addEventListener("submit", async (e) => {
   e.preventDefault();
@@ -34,14 +136,8 @@ chatForm.addEventListener("submit", async (e) => {
   chatWindow.scrollTop = chatWindow.scrollHeight;
 
   try {
-    // const response = await getMockResponse(message);
-    const response = await fetch("http://localhost:8080/collective-decision", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ message: message }),
-    });
-    const data = await response.json();
-    const aiData = data.reply;
+    const response = await apis.task[activeTriggerItem || "Chat"](message);
+    const aiData = response.reply;
     if (typeof aiData === "object") {
       renderConsensus(aiData);
       return;
@@ -54,7 +150,6 @@ chatForm.addEventListener("submit", async (e) => {
     typingIndicator.classList.add("hidden");
   }
 });
-
 function renderConsensus(data) {
   // HTML for the Trade-offs grid
   const tradeOffsHTML = (data["Direct Trade-offs & Clashes"] || [])
@@ -72,7 +167,6 @@ function renderConsensus(data) {
     `
     )
     .join("");
-
   // HTML for "Proceed if" list
   const proceedListHTML = (data["Decision Framework"]["Proceed if"] || [])
     .map(
@@ -84,7 +178,6 @@ function renderConsensus(data) {
     `
     )
     .join("");
-
   // HTML for "Wait/Avoid if" list
   const avoidListHTML = (data["Decision Framework"]["Wait/Avoid if"] || [])
     .map(
@@ -96,7 +189,6 @@ function renderConsensus(data) {
     `
     )
     .join("");
-
   // Construct the full Template
   const consensusTemplate = `
     <div class="max-w-6xl mx-auto my-8 animate-in fade-in duration-500">
@@ -115,7 +207,6 @@ function renderConsensus(data) {
                 </p>
             </div>
         </header>
-
         <!-- Direct Trade-offs Section -->
         ${
           data["Direct Trade-offs & Clashes"]?.length
@@ -130,7 +221,6 @@ function renderConsensus(data) {
             </section>`
             : ""
         }
-
         <!-- Decision Framework Section -->
         <section>
             <h3 class="text-2xl font-bold text-slate-800 mb-8 flex items-center gap-2">
@@ -163,27 +253,14 @@ function renderConsensus(data) {
         </section>
     </div>
     `;
-
   // Create container and append
   const consensusDiv = document.createElement("div");
   consensusDiv.className =
     "w-full p-4 md:p-8 bg-slate-50 border-b border-slate-200";
   consensusDiv.innerHTML = consensusTemplate;
-
   chatWindow.appendChild(consensusDiv);
   chatWindow.scrollTo({
     top: chatWindow.scrollHeight,
     behavior: "smooth",
-  });
-}
-
-// Simulating an API for demonstration
-function getMockResponse(msg) {
-  return new Promise((resolve) => {
-    setTimeout(() => {
-      resolve(
-        `I received your message: "${msg}". This is a simulated response from the AI.`
-      );
-    }, 1500);
   });
 }
