@@ -1,4 +1,5 @@
-import apis from "./api.js";
+import { aiAPI, db } from "./api.js";
+import { role, type } from "./db.js";
 
 const consensusTriggerContainer = document.getElementById(
   "agent-trigger-container"
@@ -136,8 +137,18 @@ chatForm.addEventListener("submit", async (e) => {
   chatWindow.scrollTop = chatWindow.scrollHeight;
 
   try {
-    const response = await apis.task[activeTriggerItem || "Chat"](message);
+    const doc = await db.handleSave({ role: role.user, data: message });
+    const response = await aiAPI.task[activeTriggerItem || "Chat"](message);
     const aiData = response.reply;
+    await db.handleSave({
+      qId: doc.qId,
+      role: role.assistant,
+      type: typeof aiData === "object" ? type.consensus : type.chat,
+      data:
+        typeof aiData === "object"
+          ? { ...(aiData ?? {}), title: message }
+          : aiData,
+    });
     if (typeof aiData === "object") {
       renderConsensus(aiData);
       return;
@@ -168,7 +179,7 @@ function renderConsensus(data) {
     )
     .join("");
   // HTML for "Proceed if" list
-  const proceedListHTML = (data["Decision Framework"]["Proceed if"] || [])
+  const proceedListHTML = (data["Decision Framework"]?.["Proceed if"] || [])
     .map(
       (text) => `
         <li class="flex gap-3 text-slate-700 text-sm leading-snug">
@@ -179,7 +190,7 @@ function renderConsensus(data) {
     )
     .join("");
   // HTML for "Wait/Avoid if" list
-  const avoidListHTML = (data["Decision Framework"]["Wait/Avoid if"] || [])
+  const avoidListHTML = (data["Decision Framework"]?.["Wait/Avoid if"] || [])
     .map(
       (text) => `
         <li class="flex gap-3 text-slate-700 text-sm leading-snug">
@@ -278,13 +289,15 @@ function renderConsensus(data) {
     .join("");
   // Construct the full Template
   const consensusTemplate = `
-    <div class="mx-auto my-8 animate-in fade-in duration-500">
+    <div class="mx-auto mb-8 animate-in fade-in duration-500">
         <header class="mb-12 border-b border-slate-200 pb-8">
             <div class="flex items-center gap-4 mb-4">
-                <div class="bg-slate-900 text-white p-3 rounded-lg shadow-lg">
-                    <i class="fas fa-atom text-2xl"></i>
+                <div class="bg-slate-600 text-white px-4 py-2 rounded-lg shadow-lg text-3xl">
+                    <i class="fa-regular fa-lightbulb"></i>
                 </div>
-                <h1 class="text-3xl md:text-4xl font-bold text-slate-900 tracking-tight">Nuclear Weapons Strategic Analysis</h1>
+                <h1 class="text-3xl md:text-4xl font-bold text-slate-900 tracking-tight">${
+                  data?.title ?? "n/a"
+                }</h1>
             </div>
             <div class="bg-white p-6 rounded-xl border border-slate-200 shadow-sm border-l-4 border-l-slate-800">
                 <h2 class="text-xs font-bold uppercase tracking-widest text-slate-500 mb-3">Executive Summary</h2>
@@ -417,7 +430,7 @@ function renderConsensus(data) {
   // Create container and append
   const consensusDiv = document.createElement("div");
   consensusDiv.className =
-    "w-full p-4 md:p-8 bg-slate-50 border-b border-slate-200";
+    "w-full px-4 md:px-8 bg-slate-50 border-b border-slate-200";
   consensusDiv.innerHTML = consensusTemplate;
   chatWindow.appendChild(consensusDiv);
   chatWindow.scrollTo({
@@ -425,3 +438,27 @@ function renderConsensus(data) {
     behavior: "smooth",
   });
 }
+
+window.document.addEventListener("DOMContentLoaded", async () => {
+  const response = await db.loadData();
+  chatWindow.innerHTML = "";
+  const grouped = response.reduce((acc, item) => {
+    acc[item.qId] ||= [];
+    acc[item.qId].push(item);
+    return acc;
+  }, {});
+  const result = Object.values(grouped)
+    .flatMap((items) => {
+      if (items.length === 1) return items;
+      const [a, b] = items;
+      return a.role === role.user ? [a, b] : [b, a];
+    })
+    .sort((a, b) => a.createdAt - b.createdAt);
+  result.forEach((v) => {
+    if (v.type === type.chat || v.role === role.user) {
+      appendMessage(v.role.toLowerCase(), v.data);
+      return;
+    }
+    renderConsensus(v.data);
+  });
+});

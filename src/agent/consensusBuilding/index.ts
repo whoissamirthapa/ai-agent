@@ -1,5 +1,6 @@
 import { configs } from "../../config";
 import ollama from "ollama";
+import * as ollamaWithAPIKey from "../../config/ollama";
 import { optimiticAg } from "./optimist";
 import { skepticAg } from "./skeptic";
 
@@ -43,7 +44,7 @@ class Orchestrator {
         topic: query,
       });
       console.log("[INFO]: Started final generation");
-      const response = await ollama.generate({
+      const response = await ollamaWithAPIKey.default.generate({
         model: configs.MODEL_NAME!,
         prompt: prompt.input,
         system: prompt.prompt,
@@ -54,6 +55,14 @@ class Orchestrator {
             "Executive Summary",
             "Direct Trade-offs & Clashes",
             "Decision Framework",
+            "Supporting Evidence",
+            "Alternative Options",
+            "Risk & Uncertainty Analysis",
+            "Actionable Recommendations",
+            "Scenario Analysis",
+            "Consensus Score",
+            "Open Questions",
+            "Next Steps",
           ],
           properties: {
             "Executive Summary": {
@@ -65,10 +74,15 @@ class Orchestrator {
               description: "List of conflicts and their explanations",
               items: {
                 type: "object",
-                minProperties: 1,
-                additionalProperties: {
-                  type: "string",
-                  description: "Explanation of both sides of the conflict",
+                properties: {
+                  "Point of Conflict": {
+                    type: "string",
+                    description: "Point of the conflict",
+                  },
+                  "Explain both sides": {
+                    type: "string",
+                    description: "Explanation of both sides of the conflict",
+                  },
                 },
               },
             },
@@ -237,7 +251,9 @@ class Orchestrator {
             Executive Summary
             - [Text]
             Direct Trade-offs & Clashes
-                - [Point of Conflict]: [Explain both sides]
+                - [Object]
+                  - [Point of Conflict]
+                  - [Explain both sides]
             Decision Framework
                 - Proceed if: [List conditions]
                 - Wait/Avoid if: [List conditions]
